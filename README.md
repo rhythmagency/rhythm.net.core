@@ -1,6 +1,6 @@
 A library of tools for network operations (e.g., making web requests).
 
-The primary class is NetworkHelper.
+The primary class is `NetworkHelper`.
 
 Refer to the [generated documentation](docs/generated.md) for more details.
 
