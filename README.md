@@ -1,7 +1,19 @@
+# Introduction
+
 A library of tools for network operations (e.g., making web requests).
 
-The primary class is `NetworkHelper`.
-
 Refer to the [generated documentation](docs/generated.md) for more details.
+
+# Installation
+
+Install with NuGet. Search for "Rhythm.Net.Core".
+
+# Overview
+
+## NetworkHelper
+
+* **GetResponse** Makes a web request to the specified URL and returns the response as a string.
+
+# Maintainers
 
 To create a new release to NuGet, see the [NuGet documentation](docs/nuget.md).
