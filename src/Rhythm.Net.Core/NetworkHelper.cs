@@ -58,6 +58,9 @@
         /// <param name="sendInBody">
         /// Send the data as part of the body (or in the query string)?
         /// </param>
+        /// <param name="options">
+        /// Optional. Additional options.
+        /// </param>
         /// <returns>
         /// An object containing details about the result of the attempt to send the data.
         /// </returns>
@@ -66,7 +69,7 @@
         /// and http://stackoverflow.com/questions/14702902
         /// </remarks>
         public static SendDataResult SendData(string url, IDictionary<string, string> data,
-            string method, bool sendInBody)
+            string method, bool sendInBody, SendDataOptions options = null)
         {
 
             // Construct a URL, possibly containing the data as query string parameters.
@@ -89,6 +92,15 @@
                 request.AllowAutoRedirect = false;
                 request.UserAgent = DefaultUserAgent;
                 request.Method = method;
+
+                // Add headers?
+                if (options?.Headers != null)
+                {
+                    foreach (var header in options.Headers)
+                    {
+                        request.Headers.Add(header.Key, header.Value);
+                    }
+                }
 
                 // Send the data in the body (rather than the query string)?
                 if (sendInBody)
