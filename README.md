@@ -13,6 +13,7 @@ Install with NuGet. Search for "Rhythm.Net.Core".
 ## NetworkHelper
 
 * **GetResponse** Makes a web request to the specified URL and returns the response as a string.
+* **SendData** Makes a web request to the specified URL with the specified data and returns details about the response.
 
 # Maintainers
 
