@@ -15,6 +15,10 @@ Install with NuGet. Search for "Rhythm.Net.Core".
 * **GetResponse** Makes a web request to the specified URL and returns the response as a string.
 * **SendData** Makes a web request to the specified URL with the specified data and returns details about the response.
 
+## Geography Helper
+
+* **GeocodeAddress** Given the specified address parts (street, city, state, etc.), returns the coordinate indicated by Google.
+
 # Maintainers
 
 To create a new release to NuGet, see the [NuGet documentation](docs/nuget.md).
