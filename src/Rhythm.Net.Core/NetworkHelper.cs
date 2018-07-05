@@ -36,6 +36,7 @@
         public static string GetResponse(string url)
         {
             var request = (HttpWebRequest)WebRequest.Create(url);
+            request.AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip;
             request.UserAgent = DefaultUserAgent;
             var response = (HttpWebResponse)request.GetResponse();
             var responseStream = response.GetResponseStream();
@@ -89,6 +90,7 @@
 
                 // Construct web request.
                 var request = (HttpWebRequest)WebRequest.Create(requestUrl);
+                request.AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip;
                 request.AllowAutoRedirect = false;
                 request.UserAgent = DefaultUserAgent;
                 request.Method = method;
