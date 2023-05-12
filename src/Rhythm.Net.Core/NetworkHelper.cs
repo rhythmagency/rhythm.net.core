@@ -1,13 +1,13 @@
 ﻿namespace Rhythm.Net.Core
 {
-
     // Namespaces.
+    using Microsoft.AspNetCore.Http.Extensions;
+    using Microsoft.AspNetCore.WebUtilities;
     using System;
     using System.Collections.Generic;
-    using System.IO;
+    using System.Linq;
     using System.Net;
-    using System.Text;
-    using System.Web;
+    using System.Net.Http;
     using Types;
 
     /// <summary>
@@ -19,6 +19,25 @@
         #region Constants
 
         private const string DefaultUserAgent = ".Net Server-Side Client";
+
+        private static readonly HttpClient _client;
+
+        #endregion
+
+        #region Constructors
+
+        static NetworkHelper()
+        {
+            var socketsHandler = new SocketsHttpHandler
+            {
+                PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+                AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip,
+            };
+
+            _client = new HttpClient(socketsHandler);
+
+            _client.DefaultRequestHeaders.Add("User-Agent", DefaultUserAgent);
+        }
 
         #endregion
 
@@ -35,13 +54,12 @@
         /// </returns>
         public static string GetResponse(string url)
         {
-            var request = (HttpWebRequest)WebRequest.Create(url);
-            request.AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip;
-            request.UserAgent = DefaultUserAgent;
-            var response = (HttpWebResponse)request.GetResponse();
-            var responseStream = response.GetResponseStream();
-            var reader = new StreamReader(responseStream);
-            return reader.ReadToEnd();
+            using (var requestMessage = new HttpRequestMessage(HttpMethod.Get, url))
+            {
+                var result = _client.SendAsync(requestMessage).GetAwaiter().GetResult();
+                var resultContentString = result.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                return resultContentString;
+            }
         }
 
         /// <summary>
@@ -70,7 +88,7 @@
         /// and http://stackoverflow.com/questions/14702902
         /// </remarks>
         public static SendDataResult SendData(string url, IDictionary<string, string> data,
-            string method, bool sendInBody, SendDataOptions options = null)
+            HttpMethod method, bool sendInBody, SendDataOptions options = null)
         {
 
             // Construct a URL, possibly containing the data as query string parameters.
@@ -81,48 +99,38 @@
             var strQueryString = ConstructQueryString(uri, data);
             var hasQueryString = !string.IsNullOrWhiteSpace(strQueryString);
             var requestUrl = hasQueryString && sendInUrl
-                ? $"{bareUrl}?{strQueryString}"
+                ? $"{bareUrl}{strQueryString}"
                 : url;
 
             // Attempt to send the web request.
             try
             {
-
                 // Construct web request.
-                var request = (HttpWebRequest)WebRequest.Create(requestUrl);
-                request.AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip;
-                request.AllowAutoRedirect = false;
-                request.UserAgent = DefaultUserAgent;
-                request.Method = method;
-
-                // Add headers?
-                if (options?.Headers != null)
+                using (var requestMessage = new HttpRequestMessage(method, requestUrl))
                 {
-                    foreach (var header in options.Headers)
+                    // Add headers?
+                    if (options?.Headers != null)
                     {
-                        request.Headers.Add(header.Key, header.Value);
+                        foreach (var header in options.Headers)
+                        {
+                            requestMessage.Headers.Add(header.Key, header.Value);
+                        }
                     }
+
+                    // Send the data in the body (rather than the query string)?
+                    if (sendInBody)
+                    {
+                        requestMessage.Content = new FormUrlEncodedContent(data);
+                    }
+
+                    // Get and retain response.
+                    var result = _client.SendAsync(requestMessage).GetAwaiter().GetResult();
+                    var resultContentString = result.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+
+                    sendDataResult.HttpResponseMessage = result;
+                    sendDataResult.ResponseText = resultContentString;
+                    sendDataResult.Success = true;
                 }
-
-                // Send the data in the body (rather than the query string)?
-                if (sendInBody)
-                {
-                    var postBytes = Encoding.UTF8.GetBytes(strQueryString);
-                    request.ContentType = "application/x-www-form-urlencoded";
-                    request.ContentLength = postBytes.Length;
-                    var postStream = request.GetRequestStream();
-                    postStream.Write(postBytes, 0, postBytes.Length);
-                }
-
-                // Get and retain response.
-                var response = (HttpWebResponse)request.GetResponse();
-                sendDataResult.HttpWebResponse = response;
-                var responseStream = response.GetResponseStream();
-                var reader = new StreamReader(responseStream);
-                var resultText = reader.ReadToEnd();
-                sendDataResult.ResponseText = resultText;
-                sendDataResult.Success = true;
-
             }
             catch (Exception ex)
             {
@@ -130,10 +138,8 @@
                 sendDataResult.Success = false;
             }
 
-
             // Return the result of the request.
             return sendDataResult;
-
         }
 
         #endregion
@@ -152,15 +158,30 @@
         /// <returns>
         /// The query string.
         /// </returns>
+        /// <remarks>
+        /// Parts are based on this: https://stackoverflow.com/a/43407008
+        /// </remarks>
         private static string ConstructQueryString(Uri uri, IDictionary<string, string> data)
         {
-            var queryString = HttpUtility.ParseQueryString(uri.Query);
+            // Parse the existing querystring of the input URI, if any.
+            var queryString = QueryHelpers.ParseQuery(uri.Query);
+            
+            // Convert to a list.
+            var items = queryString
+                .SelectMany(x => x.Value, (col, value) => new KeyValuePair<string, string>(col.Key, value))
+                .ToList();
+
+            // Remove any that are present in the input dictionary.
+            items.RemoveAll(x => data.ContainsKey(x.Key));
+
+            // Construct the new querystring.
+            var qb = new QueryBuilder(items);
             foreach (var pair in data)
             {
-                queryString.Set(pair.Key, pair.Value);
+                qb.Add(pair.Key, pair.Value);
             }
-            var strQueryString = queryString.ToString();
-            return strQueryString;
+
+            return qb.ToString();
         }
 
         #endregion

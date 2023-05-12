@@ -3,7 +3,7 @@
 
     // Namespaces.
     using System;
-    using System.Net;
+    using System.Net.Http;
 
     /// <summary>
     /// Stores the result of an attempt to send data over a network.
@@ -14,9 +14,9 @@
         #region Properties
 
         /// <summary>
-        /// The HTTP web response.
+        /// The HTTP response message.
         /// </summary>
-        public HttpWebResponse HttpWebResponse { get; set; }
+        public HttpResponseMessage HttpResponseMessage { get; set; }
 
         /// <summary>
         /// The response text.
